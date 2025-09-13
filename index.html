@@ -55,11 +55,11 @@
       e.preventDefault();
       const cliente = document.getElementById("cliente").value;
 
-      const { data: pedido, error } = await supabase
-        .from("pedidos")
-        .insert([{ cliente }])
-        .select()
-        .single();
+    const { data: pedido, error } = await supabase
+  .from("pedidos")
+  .insert([{ cliente, cantidad: 0, pago: "pendiente" }])  // 👈 valor por defecto
+  .select()
+  .single();
 
       if (error) { alert("Error: " + error.message); return; }
 
