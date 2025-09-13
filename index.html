@@ -2,54 +2,42 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>📦 Nuevo Pedido</title>
+  <title>📦 Pedidos con Detalles</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:20px; background:#f4f4f4; }
-    h1 { text-align:center; color:#333; }
-    form { background:#fff; padding:20px; border-radius:10px; max-width:800px; margin:auto; }
-    input, select, button { padding:10px; margin:5px 0; border:1px solid #ccc; border-radius:6px; width:100%; }
+    body { font-family: Arial, sans-serif; padding:20px; background:#f4f4f4; }
+    h1 { text-align:center; }
+    form { background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; }
+    input, select, button { margin:5px 0; padding:8px; border:1px solid #ccc; border-radius:6px; width:100%; }
     .linea { display:flex; gap:10px; margin-bottom:10px; }
     .linea input { flex:1; }
-    .linea .cantidad { width:120px; }
-    #lineas { margin-top:10px; }
-    .agregar { background:#007bff; color:white; border:none; cursor:pointer; }
-    .guardar { background:#28a745; color:white; border:none; cursor:pointer; width:100%; margin-top:15px; }
+    .linea .cantidad { width:100px; }
+    .agregar { background:#007bff; color:#fff; border:none; cursor:pointer; padding:8px; }
+    .guardar { background:#28a745; color:#fff; border:none; cursor:pointer; padding:8px; width:100%; margin-top:10px; }
     .card { background:#fff; padding:15px; border-radius:10px; margin:10px 0; box-shadow:0 2px 6px rgba(0,0,0,.2); }
     .productos { margin-left:20px; }
+    .editar { background:#ffc107; border:none; padding:5px 10px; cursor:pointer; border-radius:6px; }
   </style>
 </head>
 <body>
-  <h1>📦 Nuevo Pedido</h1>
-  <form id="pedidoForm">
+  <h1>📦 Crear Pedido</h1>
+
+  <!-- Paso 1: Cliente -->
+  <form id="clienteForm">
     <input type="text" id="cliente" placeholder="Cliente" required>
-    <input type="text" id="libre" placeholder="Dato libre">
-    <input type="number" step="0.01" id="total" placeholder="Total (opcional)">
-    
-    <select id="pago" required>
-      <option value="">-- Forma de pago --</option>
-      <option>efectivo</option>
-      <option>tarjeta</option>
-      <option>transferencia</option>
-      <option>remision</option>
-      <option>factura</option>
-      <option>credito</option>
-    </select>
-
-    <select id="chofer" required>
-      <option value="">-- Chofer --</option>
-      <option>pedro damian elizondo irachetay</option>
-      <option>sergio becerra maravilla</option>
-    </select>
-
-    <h3>🛒 Productos</h3>
-    <div id="lineas"></div>
-    <button type="button" class="agregar" onclick="agregarLinea()">➕ Agregar producto</button>
-
-    <button type="submit" class="guardar">💾 Guardar Pedido</button>
+    <button type="submit" class="guardar">✅ Crear Pedido</button>
   </form>
 
-  <h1>👀 Pedidos Guardados</h1>
+  <!-- Paso 2: Productos -->
+  <form id="detalleForm" style="display:none;">
+    <div class="linea">
+      <input type="number" step="0.01" placeholder="Cantidad" id="cantidad">
+      <input type="text" placeholder="Descripción del producto" id="producto">
+    </div>
+    <button type="button" class="agregar" onclick="agregarDetalle()">➕ Agregar producto</button>
+  </form>
+
+  <h1>👀 Pedidos</h1>
   <div id="listaPedidos"></div>
 
   <script>
@@ -59,62 +47,56 @@
       "TU_API_PUBLICA"                     // ⬅️ reemplaza
     );
 
-    const lineasDiv = document.getElementById("lineas");
-    const listaPedidos = document.getElementById("listaPedidos");
+    let pedidoActual = null; // almacena el folio del pedido creado
 
-    // ➕ Agregar línea de producto
-    function agregarLinea(producto="", cantidad="") {
-      const div = document.createElement("div");
-      div.className = "linea";
-      div.innerHTML = `
-        <input type="text" placeholder="Producto" value="${producto}" class="producto" required>
-        <input type="number" step="0.01" placeholder="Cantidad" value="${cantidad}" class="cantidad" required>
-        <button type="button" onclick="this.parentNode.remove()">❌</button>
-      `;
-      lineasDiv.appendChild(div);
-    }
-
-    // 📥 Guardar pedido
-    document.getElementById("pedidoForm").addEventListener("submit", async (e) => {
+    // Crear pedido con cliente
+    document.getElementById("clienteForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const cliente = document.getElementById("cliente").value;
 
-      // 1. Insertar encabezado en pedidos
-      const { data: pedido, error: errPedido } = await supabase
+      const { data: pedido, error } = await supabase
         .from("pedidos")
-        .insert([{
-          cliente: document.getElementById("cliente").value,
-          libre: document.getElementById("libre").value,
-          total: parseFloat(document.getElementById("total").value) || 0,
-          pago: document.getElementById("pago").value,
-          chofer: document.getElementById("chofer").value
-        }])
+        .insert([{ cliente }])
         .select()
         .single();
 
-      if (errPedido) { alert("Error al guardar pedido: " + errPedido.message); return; }
+      if (error) { alert("Error: " + error.message); return; }
 
-      // 2. Preparar las líneas
-      const lineas = Array.from(lineasDiv.querySelectorAll(".linea")).map(l => ({
-        pedido_id: pedido.folio,
-        producto: l.querySelector(".producto").value,
-        cantidad: parseFloat(l.querySelector(".cantidad").value)
-      }));
+      pedidoActual = pedido.folio;
+      alert("Pedido creado con folio #" + pedido.folio);
 
-      if (lineas.length > 0) {
-        const { error: errLineas } = await supabase.from("pedido_detalles").insert(lineas);
-        if (errLineas) { alert("Error en detalles: " + errLineas.message); return; }
-      }
-
-      alert("✅ Pedido guardado con folio #" + pedido.folio);
-      lineasDiv.innerHTML = "";
-      e.target.reset();
+      document.getElementById("clienteForm").style.display = "none";
+      document.getElementById("detalleForm").style.display = "block";
       cargarPedidos();
     });
 
-    // 📋 Mostrar pedidos con sus productos
+    // Agregar línea de detalle
+    async function agregarDetalle() {
+      const cantidad = parseFloat(document.getElementById("cantidad").value);
+      const producto = document.getElementById("producto").value;
+
+      if (!cantidad || !producto) { alert("Falta cantidad o producto"); return; }
+
+      const { error } = await supabase.from("pedido_detalles").insert([{
+        pedido_id: pedidoActual,
+        cantidad,
+        producto
+      }]);
+
+      if (error) { alert("Error al guardar detalle: " + error.message); return; }
+
+      document.getElementById("cantidad").value = "";
+      document.getElementById("producto").value = "";
+      document.getElementById("cantidad").focus();
+
+      cargarPedidos();
+    }
+
+    // Cargar pedidos con detalles
     async function cargarPedidos() {
       const { data: pedidos } = await supabase.from("pedidos").select("*").order("folio", { ascending: false });
-      listaPedidos.innerHTML = "";
+      const lista = document.getElementById("listaPedidos");
+      lista.innerHTML = "";
 
       for (let p of pedidos) {
         const { data: detalles } = await supabase.from("pedido_detalles").select("*").eq("pedido_id", p.folio);
@@ -124,21 +106,34 @@
         card.innerHTML = `
           <h3>Pedido #${p.folio} – ${p.cliente}</h3>
           <p><b>Fecha:</b> ${new Date(p.fecha).toLocaleString()}</p>
-          <p><b>Dato libre:</b> ${p.libre || ""}</p>
-          <p><b>Total:</b> ${p.total}</p>
-          <p><b>Pago:</b> ${p.pago}</p>
-          <p><b>Chofer:</b> ${p.chofer}</p>
           <p><b>Productos:</b></p>
           <ul class="productos">
-            ${detalles.map(d => `<li>${d.producto} → ${d.cantidad}</li>`).join("")}
+            ${detalles.map(d => `<li>${d.cantidad} × ${d.producto}</li>`).join("")}
           </ul>
+          <p><b>Chofer:</b> ${p.chofer || "❌ Sin asignar"}</p>
+          <p><b>Pago:</b> ${p.pago || "❌ Sin definir"}</p>
+          <p><b>Livre:</b> ${p.libre || ""}</p>
+          <button class="editar" onclick="editarPedido(${p.folio})">✏️ Editar datos</button>
         `;
-        listaPedidos.appendChild(card);
+        lista.appendChild(card);
       }
     }
 
-    // 🚀 Inicia con 1 línea vacía y carga pedidos
-    agregarLinea();
+    // Editar datos adicionales (chofer, pago, total, libre)
+    async function editarPedido(folio) {
+      const chofer = prompt("Chofer:");
+      const pago = prompt("Forma de pago:");
+      const libre = prompt("Dato libre:");
+      const total = prompt("Total:");
+
+      const { error } = await supabase.from("pedidos").update({
+        chofer, pago, libre, total: parseFloat(total) || 0
+      }).eq("folio", folio);
+
+      if (error) { alert("Error: " + error.message); return; }
+      cargarPedidos();
+    }
+
     cargarPedidos();
   </script>
 </body>
