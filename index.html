@@ -42,13 +42,13 @@
   <div id="listaPedidos"></div>
 
   <script>
-    // Configura Supabase
+    // 🔹 Conexión a Supabase
     const supabase = window.supabase.createClient(
-      "https://TU_PROYECTO.supabase.co",   // ⬅️ reemplaza
-      "TU_API_PUBLICA"                     // ⬅️ reemplaza
+      "https://cvpbtjlupswbyxenugpz.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2cGJ0amx1cHN3Ynl4ZW51Z3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3MDIxOTQsImV4cCI6MjA2MzI3ODE5NH0.iiJsYM3TtaGPdeCtPcEXwAz3LfFc1uJGECEvOErvrqY"
     );
 
-    let pedidoActual = null; // almacena el folio del pedido creado
+    let pedidoActual = null;
 
     // Crear pedido con cliente
     document.getElementById("clienteForm").addEventListener("submit", async (e) => {
