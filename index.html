@@ -57,7 +57,13 @@
 
 const { data: pedido, error } = await supabase
   .from("pedidos")
-  .insert([{ cliente, cantidad: 0, pago: "pendiente", chofer: "pendiente" }]) 
+  .insert([{
+    cliente,
+    cantidad: 0,
+    total: 0,
+    pago: "pendiente",
+    chofer: "pendiente"
+  }])
   .select()
   .single();
 
@@ -75,27 +81,33 @@ const { data: pedido, error } = await supabase
     });
 
     // Agregar línea de detalle
-    async function agregarDetalle() {
-      const cantidad = parseFloat(document.getElementById("cantidad").value);
-      const producto = document.getElementById("producto").value;
+async function agregarDetalle() {
+  const cantidad = parseFloat(document.getElementById("cantidad").value);
+  const producto = document.getElementById("producto").value;
 
-      if (!cantidad || !producto) { alert("Falta cantidad o producto"); return; }
+  if (!cantidad || !producto) {
+    alert("⚠️ Debes capturar cantidad y producto");
+    return;
+  }
 
-      const { error } = await supabase.from("pedido_detalles").insert([{
-        pedido_id: pedidoActual,
-        cantidad,
-        producto
-      }]);
+  const { error } = await supabase.from("pedido_detalles").insert([{
+    pedido_id: pedidoActual,
+    cantidad,
+    producto
+  }]);
 
-      if (error) { alert("Error al guardar detalle: " + error.message); return; }
+  if (error) {
+    alert("Error al guardar detalle: " + error.message);
+    console.error(error);
+    return;
+  }
 
-      document.getElementById("cantidad").value = "";
-      document.getElementById("producto").value = "";
-      document.getElementById("cantidad").focus();
+  document.getElementById("cantidad").value = "";
+  document.getElementById("producto").value = "";
+  document.getElementById("cantidad").focus();
 
-      cargarPedidos();
-    }
-
+  cargarPedidos();
+}
     // Cargar pedidos con detalles
     async function cargarPedidos() {
       const { data: pedidos } = await supabase.from("pedidos").select("*").order("folio", { ascending: false });
