@@ -1,117 +1,163 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>📦 Crear Pedido</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-    h1, h2 { text-align: center; }
-    form {
-      background: #fff; padding: 20px; border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,.2); max-width: 600px; margin: 20px auto;
-    }
-    input, select, button {
-      display: block; width: 100%; margin: 10px 0; padding: 10px;
-      border: 1px solid #ccc; border-radius: 6px;
-    }
-    button { background: #28a745; color: white; border: none; cursor: pointer; }
-    ul { background: white; padding: 10px; border-radius: 8px; }
+    body{font-family:Arial, sans-serif;background:#f4f4f4;margin:0;padding:24px}
+    h1{margin:0 0 12px;text-align:center}
+    .panel{max-width:720px;margin:12px auto;background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+    .row{display:flex;gap:10px}
+    input,button{padding:10px;border:1px solid #ccc;border-radius:8px}
+    input{width:100%}
+    button{cursor:pointer}
+    .btn{background:#28a745;color:#fff;border:none}
+    .btn-sec{background:#0d6efd;color:#fff;border:none}
+    .hidden{display:none}
+    ul{margin:8px 0 0 18px}
+    .muted{color:#666}
+    .info{margin:8px 0;padding:8px;border-radius:8px;background:#eef7ff}
+    .danger{background:#ffecec;color:#a40000}
   </style>
 </head>
 <body>
   <h1>📦 Crear Pedido</h1>
 
-  <!-- Formulario principal de pedido -->
-  <form id="formPedido">
-    <input type="text" id="cliente" placeholder="Cliente" required>
-    <input type="text" id="libre" placeholder="Dato libre (opcional)">
-    <select id="pago" required>
-      <option value="">-- Forma de pago --</option>
-      <option value="efectivo">efectivo</option>
-      <option value="tarjeta">tarjeta</option>
-      <option value="transferencia">transferencia</option>
-      <option value="remision">remision</option>
-      <option value="factura">factura</option>
-      <option value="credito">credito</option>
-    </select>
-    <select id="chofer" required>
-      <option value="">-- Chofer --</option>
-      <option value="pedro damian elizondo irachetay">pedro damian elizondo irachetay</option>
-      <option value="sergio becerra maravilla">sergio becerra maravilla</option>
-    </select>
-    <button type="submit">✅ Crear Pedido</button>
-  </form>
-
-  <!-- Sección para artículos -->
-  <div id="seccionArticulos" style="display:none;">
-    <h2>🛒 Agregar artículos</h2>
-    <form id="formArticulo">
-      <input type="number" id="cantidadArticulo" placeholder="Cantidad" required>
-      <input type="text" id="descripcionArticulo" placeholder="Descripción del producto" required>
-      <button type="submit">➕ Agregar Producto</button>
+  <!-- 1) Crear encabezado SOLO con cliente -->
+  <div class="panel">
+    <form id="formPedido">
+      <input id="cliente" type="text" placeholder="Cliente" required />
+      <button class="btn" type="submit">✅ Crear pedido</button>
     </form>
+    <div id="msgPedido" class="info hidden"></div>
+  </div>
 
-    <h3>Artículos agregados:</h3>
-    <ul id="listaArticulos"></ul>
+  <!-- 2) Agregar artículos al pedido creado -->
+  <div id="panelArticulos" class="panel hidden">
+    <div class="muted">Folio actual: <b id="folioActual">-</b></div>
+    <div class="row" style="margin-top:8px">
+      <input id="cantidad" type="number" step="0.01" placeholder="Cantidad" />
+      <input id="producto" type="text" placeholder="Descripción del producto" />
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="btnAgregar" class="btn-sec" type="button">➕ Agregar producto</button>
+      <button id="btnTerminar" class="btn" type="button">✅ Terminar</button>
+    </div>
+
+    <div id="errorBox" class="info danger hidden"></div>
+
+    <h3 style="margin:14px 0 6px">Artículos agregados</h3>
+    <ul id="lista"></ul>
   </div>
 
   <script>
-    // Conexión a Supabase
+    // --- Conexión Supabase (tus credenciales) ---
     const supabase = window.supabase.createClient(
       "https://cvpbtjlupswbyxenugpz.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2cGJ0amx1cHN3Ynl4ZW51Z3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3MDIxOTQsImV4cCI6MjA2MzI3ODE5NH0.iiJsYM3TtaGPdeCtPcEXwAz3LfFc1uJGECEvOErvrqY"
     );
 
-    let pedidoId = null;
+    // Estado
+    let folio = null; // ¡en tu BD se llama FOLIO!
 
-    // Crear pedido
-    document.getElementById("formPedido").addEventListener("submit", async (e) => {
+    // Utilidades UI
+    const $ = (id) => document.getElementById(id);
+    const show = (el) => el.classList.remove("hidden");
+    const hide = (el) => el.classList.add("hidden");
+
+    // 1) Crear pedido solo con cliente (pago/chofer quedan 'pendiente' por default en la BD)
+    $("formPedido").addEventListener("submit", async (e) => {
       e.preventDefault();
+      hide($("errorBox"));
+      const cliente = $("cliente").value.trim();
+      if (!cliente) return;
 
-      const cliente = document.getElementById("cliente").value;
-      const libre = document.getElementById("libre").value;
-      const pago = document.getElementById("pago").value;
-      const chofer = document.getElementById("chofer").value;
-
-      const { data, error } = await supabase.from("pedidos").insert([{
-        cliente, libre, pago, chofer, cantidad: 0, total: 0, fecha: new Date()
-      }]).select("id");
+      const { data, error } = await supabase
+        .from("pedidos")
+        .insert([{ cliente }])
+        .select("folio")          // 👈 IMPORTANTE: devuelve FOLIO, no id
+        .single();
 
       if (error) {
-        alert("❌ Error al crear pedido: " + error.message);
-      } else {
-        pedidoId = data[0].id;
-        alert("✅ Pedido creado. Ahora agrega los productos.");
-        document.getElementById("formPedido").reset();
-        document.getElementById("seccionArticulos").style.display = "block";
-      }
-    });
-
-    // Agregar artículos
-    document.getElementById("formArticulo").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!pedidoId) {
-        alert("Primero crea un pedido.");
+        $("msgPedido").textContent = "❌ " + error.message;
+        $("msgPedido").classList.remove("hidden");
         return;
       }
 
-      const cantidad = parseFloat(document.getElementById("cantidadArticulo").value);
-      const descripcion = document.getElementById("descripcionArticulo").value;
+      folio = data.folio;
+      $("folioActual").textContent = folio;
+      $("msgPedido").textContent = "✅ Pedido creado. Ahora agrega artículos.";
+      $("msgPedido").classList.remove("hidden");
+      show($("panelArticulos"));
+      $("cantidad").focus();
+      $("formPedido").reset();
+      await refrescarLista();
+    });
 
-      const { error } = await supabase.from("pedidos_detalle").insert([{
-        pedido_id: pedidoId, cantidad, descripcion
-      }]);
+    // 2) Agregar línea a pedido_detalles
+    $("btnAgregar").addEventListener("click", async () => {
+      hide($("errorBox"));
+      if (!folio) {
+        $("errorBox").textContent = "Primero crea el pedido.";
+        show($("errorBox"));
+        return;
+      }
+      const cantidad = parseFloat($("cantidad").value);
+      const producto = $("producto").value.trim();
+
+      if (!cantidad || !producto) {
+        $("errorBox").textContent = "Captura cantidad y descripción.";
+        show($("errorBox"));
+        return;
+      }
+
+      const { error } = await supabase.from("pedido_detalles").insert([
+        { pedido_id: folio, cantidad, producto } // 👈 NOMBRES CORRECTOS
+      ]);
 
       if (error) {
-        alert("❌ Error al guardar detalle: " + error.message);
-      } else {
-        const li = document.createElement("li");
-        li.textContent = `${cantidad} × ${descripcion}`;
-        document.getElementById("listaArticulos").appendChild(li);
-        document.getElementById("formArticulo").reset();
+        $("errorBox").textContent = "Error al guardar detalle: " + error.message;
+        show($("errorBox"));
+        return;
       }
+
+      $("cantidad").value = "";
+      $("producto").value = "";
+      $("cantidad").focus();
+      await refrescarLista();
     });
+
+    // 3) Terminar pedido (solo resetea el estado para capturar uno nuevo)
+    $("btnTerminar").addEventListener("click", () => {
+      folio = null;
+      $("folioActual").textContent = "-";
+      $("lista").innerHTML = "";
+      hide($("panelArticulos"));
+      $("msgPedido").textContent = "✅ Pedido terminado. Puedes crear otro.";
+      show($("msgPedido"));
+      $("cliente").focus();
+    });
+
+    // Cargar lista de detalles del pedido actual
+    async function refrescarLista() {
+      if (!folio) return;
+      const { data, error } = await supabase
+        .from("pedido_detalles")
+        .select("cantidad, producto")
+        .eq("pedido_id", folio)
+        .order("id", { ascending: true });
+
+      if (error) {
+        $("errorBox").textContent = "No se pudo cargar la lista: " + error.message;
+        show($("errorBox"));
+        return;
+      }
+
+      $("lista").innerHTML = (data || [])
+        .map((d) => `<li>${d.cantidad} × ${d.producto}</li>`)
+        .join("");
+    }
   </script>
 </body>
 </html>
