@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>📋 Pedidos</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    h1 { color: #333; }
+    form, table { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    input, select, button { margin: 5px 0; padding: 8px; width: 100%; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #007bff; color: #fff; }
+    .acciones button { margin-right: 5px; }
+  </style>
+</head>
+<body>
+  <h1>📋 Gestión de Pedidos</h1>
+
+  <!-- Formulario para insertar pedidos -->
+  <form id="pedidoForm">
+    <input type="text" id="cliente" placeholder="Cliente" required>
+    <input type="number" step="0.01" id="cantidad" placeholder="Cantidad" required>
+    <input type="text" id="concepto" placeholder="Concepto">
+    <input type="number" step="0.01" id="total" placeholder="Total" required>
+    
+    <select id="pago" required>
+      <option value="">-- Forma de pago --</option>
+      <option>efectivo</option>
+      <option>tarjeta</option>
+      <option>transferencia</option>
+      <option>remision</option>
+      <option>factura</option>
+      <option>credito</option>
+    </select>
+    
+    <select id="chofer" required>
+      <option value="">-- Chofer --</option>
+      <option>pedro damian elizondo irachetay</option>
+      <option>sergio becerra maravilla</option>
+    </select>
+
+    <button type="submit">➕ Agregar Pedido</button>
+  </form>
+
+  <!-- Tabla de pedidos -->
+  <table>
+    <thead>
+      <tr>
+        <th>Folio</th>
+        <th>Fecha</th>
+        <th>Cliente</th>
+        <th>Cantidad</th>
+        <th>Concepto</th>
+        <th>Total</th>
+        <th>Pago</th>
+        <th>Chofer</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaPedidos"></tbody>
+  </table>
+
+  <script>
+    // 🔹 Configura tu Supabase
+    const supabase = window.supabase.createClient(
+      "https://TU_PROYECTO.supabase.co",   // ⬅️ reemplaza
+      "TU_API_PUBLICA"                     // ⬅️ reemplaza
+    );
+
+    const form = document.getElementById("pedidoForm");
+    const tabla = document.getElementById("tablaPedidos");
+
+    // Cargar pedidos al inicio
+    async function cargarPedidos() {
+      const { data, error } = await supabase.from("pedidos").select("*").order("folio", { ascending: false });
+      if (error) {
+        console.error(error);
+        return;
+      }
+      tabla.innerHTML = "";
+      data.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.folio}</td>
+          <td>${new Date(p.fecha).toLocaleString()}</td>
+          <td>${p.cliente}</td>
+          <td>${p.cantidad}</td>
+          <td>${p.concepto || ""}</td>
+          <td>${p.total}</td>
+          <td>${p.pago}</td>
+          <td>${p.chofer}</td>
+          <td class="acciones">
+            <button onclick="editarPedido(${p.folio})">✏️</button>
+            <button onclick="borrarPedido(${p.folio})">🗑️</button>
+          </td>
+        `;
+        tabla.appendChild(tr);
+      });
+    }
+
+    // Insertar pedido
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nuevo = {
+        cliente: document.getElementById("cliente").value,
+        cantidad: parseFloat(document.getElementById("cantidad").value),
+        concepto: document.getElementById("concepto").value,
+        total: parseFloat(document.getElementById("total").value),
+        pago: document.getElementById("pago").value,
+        chofer: document.getElementById("chofer").value
+      };
+      const { error } = await supabase.from("pedidos").insert(nuevo);
+      if (error) { console.error(error); return; }
+      form.reset();
+      cargarPedidos();
+    });
+
+    // Borrar pedido
+    async function borrarPedido(folio) {
+      const { error } = await supabase.from("pedidos").delete().eq("folio", folio);
+      if (error) { console.error(error); return; }
+      cargarPedidos();
+    }
+
+    // Editar pedido (ejemplo simple: vuelve a pedir cliente y total)
+    async function editarPedido(folio) {
+      const cliente = prompt("Nuevo cliente:");
+      const total = prompt("Nuevo total:");
+      if (!cliente || !total) return;
+      const { error } = await supabase.from("pedidos").update({
+        cliente: cliente,
+        total: parseFloat(total)
+      }).eq("folio", folio);
+      if (error) { console.error(error); return; }
+      cargarPedidos();
+    }
+
+    // Arrancar
+    cargarPedidos();
+  </script>
+</body>
+</html>
