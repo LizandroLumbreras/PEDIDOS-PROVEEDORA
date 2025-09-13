@@ -6,31 +6,28 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-    h1 { text-align: center; }
+    h1, h2 { text-align: center; }
     form {
       background: #fff; padding: 20px; border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,.2); max-width: 500px; margin: auto;
+      box-shadow: 0 2px 6px rgba(0,0,0,.2); max-width: 600px; margin: 20px auto;
     }
     input, select, button {
       display: block; width: 100%; margin: 10px 0; padding: 10px;
       border: 1px solid #ccc; border-radius: 6px;
     }
-    button {
-      background: #28a745; color: white; border: none; cursor: pointer;
-    }
+    button { background: #28a745; color: white; border: none; cursor: pointer; }
+    ul { background: white; padding: 10px; border-radius: 8px; }
   </style>
 </head>
 <body>
   <h1>📦 Crear Pedido</h1>
 
+  <!-- Formulario principal de pedido -->
   <form id="formPedido">
     <input type="text" id="cliente" placeholder="Cliente" required>
     <input type="text" id="libre" placeholder="Dato libre (opcional)">
-    <input type="number" id="cantidad" placeholder="Cantidad global" value="0">
-    <input type="number" id="total" placeholder="Total $" value="0">
-
     <select id="pago" required>
-      <option value="pendiente">-- Forma de pago --</option>
+      <option value="">-- Forma de pago --</option>
       <option value="efectivo">efectivo</option>
       <option value="tarjeta">tarjeta</option>
       <option value="transferencia">transferencia</option>
@@ -38,44 +35,19 @@
       <option value="factura">factura</option>
       <option value="credito">credito</option>
     </select>
-
     <select id="chofer" required>
-      <option value="pendiente">-- Chofer --</option>
+      <option value="">-- Chofer --</option>
       <option value="pedro damian elizondo irachetay">pedro damian elizondo irachetay</option>
       <option value="sergio becerra maravilla">sergio becerra maravilla</option>
     </select>
-
     <button type="submit">✅ Crear Pedido</button>
   </form>
 
-  <script>
-    // Conexión a Supabase
-    const supabase = window.supabase.createClient(
-      "https://cvpbtjlupswbyxenugpz.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2cGJ0amx1cHN3Ynl4ZW51Z3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3MDIxOTQsImV4cCI6MjA2MzI3ODE5NH0.iiJsYM3TtaGPdeCtPcEXwAz3LfFc1uJGECEvOErvrqY"
-    );
-
-    document.getElementById("formPedido").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const cliente = document.getElementById("cliente").value;
-      const libre = document.getElementById("libre").value;
-      const cantidad = parseFloat(document.getElementById("cantidad").value) || 0;
-      const total = parseFloat(document.getElementById("total").value) || 0;
-      const pago = document.getElementById("pago").value;
-      const chofer = document.getElementById("chofer").value;
-
-      const { error } = await supabase.from("pedidos").insert([{
-        cliente, libre, cantidad, total, pago, chofer, fecha: new Date()
-      }]);
-
-      if (error) {
-        alert("❌ Error al crear pedido: " + error.message);
-      } else {
-        alert("✅ Pedido creado con éxito");
-        e.target.reset();
-      }
-    });
-  </script>
-</body>
-</html>
+  <!-- Sección para artículos -->
+  <div id="seccionArticulos" style="display:none;">
+    <h2>🛒 Agregar artículos</h2>
+    <form id="formArticulo">
+      <input type="number" id="cantidadArticulo" placeholder="Cantidad" required>
+      <input type="text" id="descripcionArticulo" placeholder="Descripción del producto" required>
+      <button type="submit">➕ Agregar Producto</button>
+    </form>
