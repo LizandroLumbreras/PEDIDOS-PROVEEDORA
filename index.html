@@ -51,3 +51,67 @@
       <input type="text" id="descripcionArticulo" placeholder="Descripción del producto" required>
       <button type="submit">➕ Agregar Producto</button>
     </form>
+
+    <h3>Artículos agregados:</h3>
+    <ul id="listaArticulos"></ul>
+  </div>
+
+  <script>
+    // Conexión a Supabase
+    const supabase = window.supabase.createClient(
+      "https://cvpbtjlupswbyxenugpz.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2cGJ0amx1cHN3Ynl4ZW51Z3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc3MDIxOTQsImV4cCI6MjA2MzI3ODE5NH0.iiJsYM3TtaGPdeCtPcEXwAz3LfFc1uJGECEvOErvrqY"
+    );
+
+    let pedidoId = null;
+
+    // Crear pedido
+    document.getElementById("formPedido").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const cliente = document.getElementById("cliente").value;
+      const libre = document.getElementById("libre").value;
+      const pago = document.getElementById("pago").value;
+      const chofer = document.getElementById("chofer").value;
+
+      const { data, error } = await supabase.from("pedidos").insert([{
+        cliente, libre, pago, chofer, cantidad: 0, total: 0, fecha: new Date()
+      }]).select("id");
+
+      if (error) {
+        alert("❌ Error al crear pedido: " + error.message);
+      } else {
+        pedidoId = data[0].id;
+        alert("✅ Pedido creado. Ahora agrega los productos.");
+        document.getElementById("formPedido").reset();
+        document.getElementById("seccionArticulos").style.display = "block";
+      }
+    });
+
+    // Agregar artículos
+    document.getElementById("formArticulo").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!pedidoId) {
+        alert("Primero crea un pedido.");
+        return;
+      }
+
+      const cantidad = parseFloat(document.getElementById("cantidadArticulo").value);
+      const descripcion = document.getElementById("descripcionArticulo").value;
+
+      const { error } = await supabase.from("pedidos_detalle").insert([{
+        pedido_id: pedidoId, cantidad, descripcion
+      }]);
+
+      if (error) {
+        alert("❌ Error al guardar detalle: " + error.message);
+      } else {
+        const li = document.createElement("li");
+        li.textContent = `${cantidad} × ${descripcion}`;
+        document.getElementById("listaArticulos").appendChild(li);
+        document.getElementById("formArticulo").reset();
+      }
+    });
+  </script>
+</body>
+</html>
